@@ -1,0 +1,143 @@
+/** 3. 스테가노그래피 적용 */
+	public boolean applyStegano() {
+		if (MP3bytes == null) {
+			System.out.println("선택된 MP3 파일 없음");
+			return false;
+		}
+		if (Recordbits.size() == 0) {
+			System.out.println("선택된 MP3 파일 없음");
+			return false;
+		}
+		int startPoint = findStartPoint();
+
+		Vector<AAU> AAUs = new Vector<AAU>();
+
+		initAAUs(AAUs, startPoint);
+
+		int inputNumber = 0;
+		int pointer=0; // 녹음 파일의 비트 포인터
+		int count = 0; // 프레임 카운트
+		System.out.println("AAU 수 : " + AAUs.size());
+
+		for (AAU aau : AAUs) {
+			count++;
+			if (count < 5) // 초기 블록은 제외
+				continue;
+			/** 헤더 수정 */
+			{
+				{ /** Priv bit 수정 [1 bit] */
+					if ((MP3bytes[aau.sp + 2] & 1) > 0)
+						MP3bytes[aau.sp + 2]--;
+					else
+						MP3bytes[aau.sp + 2]++;
+					
+					inputNumber++;
+				}
+				{ /** Copyright 수정 [1 bit] */
+					if ((MP3bytes[aau.sp + 3] & 8) > 0)
+						MP3bytes[aau.sp + 3] -= 8;
+					else
+						MP3bytes[aau.sp + 3] += 8;
+					inputNumber++;
+				}
+				{ /** Original 수정 [1 bit] */
+					if ((MP3bytes[aau.sp + 3] & 4) > 0)
+						MP3bytes[aau.sp + 3] -= 4;
+					else
+						MP3bytes[aau.sp + 3] += 4;
+					inputNumber++;
+				}
+				{ /** Emphasis 수정 [2 bits] */
+					if ((MP3bytes[aau.sp + 3] & 2) > 0)
+						MP3bytes[aau.sp + 3] -= 2;
+					else
+						MP3bytes[aau.sp + 3] += 2;
+					inputNumber++;
+					if ((MP3bytes[aau.sp + 3] & 1) > 0)
+						MP3bytes[aau.sp + 3] -= 1;
+					else
+						MP3bytes[aau.sp + 3] += 1;
+					inputNumber++;
+				}
+			}
+			/** 사이드 인포 수정 */
+			{
+				{ /** private_bits, scfsi 수정 */
+					if (aau.singleMode == false) { // 듀얼 채널
+						for (int j = 64; j > 2; j /= 2) {
+							// 원래 j>8이 정성임. 근데 실험 결과 2번(scfsi) 더 수정해도 이상이 없음
+							if ((MP3bytes[aau.sidePoint + 1] & j) > 0)
+								MP3bytes[aau.sidePoint + 1] -= j;
+							else
+								MP3bytes[aau.sidePoint + 1] += j;
+							inputNumber++;
+						}
+						for (int j = 128; j > 32; j /= 2) {
+							// 두번 째 scfsi 수정
+							if ((MP3bytes[aau.sidePoint + 2] & j) > 0)
+								MP3bytes[aau.sidePoint + 2] -= j;
+							else
+								MP3bytes[aau.sidePoint + 2] += j;
+							inputNumber++;
+						}
+					} else { // 싱글 채널
+						for (int j = 64; j > 2; j /= 2) {
+							if ((MP3bytes[aau.sidePoint + 1] & j) > 0)
+								MP3bytes[aau.sidePoint + 1] -= j;
+							else
+								MP3bytes[aau.sidePoint + 1] += j;
+							inputNumber++;
+						}
+					}
+				}
+			}
+			{ /** 마지막 비트 수정 (2 bits) */
+				for (int j = 2; j > 0; j /= 2) {
+					if ((MP3bytes[aau.sdp - 1] & j) > 0)
+						MP3bytes[aau.sdp - 1] -= j;
+					else
+						MP3bytes[aau.sdp - 1] += j;
+					inputNumber++;
+				}
+			}
+			/** main data 수정 *//*
+			for (int i = aau.sdp; i < aau.ep; i++) {
+				byteCount++;
+				if (byteCount % 50 == 0) {
+					if ((MP3bytes[i] & 1) == 1)
+						MP3bytes[i]--;
+					else
+						MP3bytes[i]++;
+					inputNumber++;
+				}
+			}*/
+
+			// MP3bytes[aau.sdp-1] = 0; for (int j=0; j<1; j++) { MP3bytes[aau.ep-j]
+			// = (byte)0xFF; inputNumber += 8; } //inputNumber += 8;
+
+			// MP3bytes[aau.ep] &= 0xFF;
+		}
+
+		
+		
+		//byte[] newByte = new byte[MP3bytes.length + 12800];
+		for (int i=0; i<MP3bytes.length; i++)
+			Steganobytes.add(MP3bytes[i]);
+		//newByte[MP3bytes.length-1] = 0;
+		//newByte[MP3bytes.length] = 0;
+		for (int i=MP3bytes.length; i<newByte.length; i+=128) {
+			newByte[i] = 0x54;
+			newByte[i+1] = 0x41;
+			newByte[i+2] = 0x47;
+			for (int j=i+3; j<i+128; j++) {
+				newByte[j] = 0x77;
+			}
+			inputNumber += 8*125;
+		}
+		//newByte[newByte.length-1] = (byte) 0xFF;
+		
+		System.out.println("처리 수 : " + (double) inputNumber / 8 / 1024 + " kb");
+		System.out.println("처리 완료");
+		
+		return true;
+	}
