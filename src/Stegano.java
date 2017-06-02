@@ -5,6 +5,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Vector;
 
+/**
+ * 1. boolean loadMP3(String MP3FilePath) : MP3 파일 불러오기
+ * <br>2. boolean loadRecord(String recordFilePath) : 녹음 파일 불러오기
+ * <br>3. boolean applyStegano() : 스테가노그래피 적용
+ * <br>4. boolean saveStegano(String SteganoFilePath) : 처리된 스테가노그래피 파일 저장
+ * */
 public class Stegano {
 	String soundFileName = null;
 	byte[] MP3bytes = null; // MP3 파일
@@ -12,8 +18,6 @@ public class Stegano {
 	//byte[] Steganobytes = null; // 결과 파일
 	Vector<Byte> Steganobytes = new Vector<Byte>(); // 결과 파일 (byte 단위로 저장)
 	
-	
-
 	class AAU {
 		int sp; // AAU 시작 바이트 위치
 		int ep; // AAU 마지막 바이트 위치
@@ -72,6 +76,13 @@ public class Stegano {
 		System.out.println("읽기 성공");
 		System.out.println("파일 크기 : " + Recordbytes.length / 1024 + " kb");
 		
+		// 위장 마킹 (1값 24개, 0값 24개)
+		for (int i=0; i<24; i++)
+			Recordbits.addElement(1);
+		for (int i=0; i<24; i++)
+			Recordbits.addElement(0);
+		
+		
 		for (int i=0; i<Recordbytes.length; i++) {
 			for (int j=128; j>0; j/=2) {
 				if ((Recordbytes[i] & j) > 0)
@@ -87,11 +98,14 @@ public class Stegano {
 	public boolean saveStegano(String SteganoFilePath) {
 		FileOutputStream SteganoOutputStream = null; // 스테가노그래피 파일 outputStream
 		
-		if (Steganobytes == null) {
+		if (Steganobytes.size() == 0) {
 			System.out.println("스테가노그래피 적용 안됨");
 			return false;
 		}
-			
+		byte[] SteganoArr = new byte[(int) Steganobytes.size()]; // 배열로 변환
+		for (int i=0; i<SteganoArr.length; i++) // 변환
+			SteganoArr[i] = Steganobytes.get(i);
+		
 		File SteganoFile = new File(SteganoFilePath);
 		try {
 			SteganoOutputStream = new FileOutputStream(SteganoFile);
@@ -100,7 +114,7 @@ public class Stegano {
 		}
 		try
 		{
-			SteganoOutputStream.write(Steganobytes);
+			SteganoOutputStream.write(SteganoArr);
 		} catch (IOException e) { // TODO Auto-generated catch block
 			return false;
 		}
@@ -229,29 +243,120 @@ public class Stegano {
 		
 		
 		//byte[] newByte = new byte[MP3bytes.length + 12800];
-		for (int i=0; i<MP3bytes.length-2; i++)
+		for (int i=0; i<MP3bytes.length-1; i++) // 수정된 파일 복사
 			Steganobytes.add(MP3bytes[i]);
-		Steganobytes.add((byte)0); // 맺음 비트 0으로 수정
-		Steganobytes.add((byte)0); // 맺음 비트 0으로 수정
+		//Steganobytes.add((byte)0); // 맺음 바이트 0으로 수정
 		//newByte[MP3bytes.length-1] = 0;
 		//newByte[MP3bytes.length] = 0;
-		int end = Recordbits.size()-pointer;
-		byte inputByte = 0;
-		int countBit = 0;
-		for (int i=0; i<end; i++) {
-			if (i % 128 == 0) {
-				Steganobytes.add((byte) 0x54);
-				Steganobytes.add((byte) 0x41);
-				Steganobytes.add((byte) 0x47);
-				continue;
-			}
-			if (countBit % 8 == 0 && countBit != 0) {
-				asdasdasdd
-			}
-			countBit++;
-			inputNumber ++;
+		
+		// 위장용 Tag 정보
+		Steganobytes.add((byte) 'T');
+		Steganobytes.add((byte) 'A');
+		Steganobytes.add((byte) 'G');
+		for (int i=0; i<125; i++) {
+			Steganobytes.add((byte)0);
 		}
+		
+		
+		// 여분 데이터 삽입
+		int end = Recordbits.size()-pointer;
+		byte inputByte = 0; // 입력 버퍼
+		int bitCount = 0; // 현재 버퍼에 삽입된 비트 수
+		for (int i=0; i<end; i++) {
+			if (bitCount % (125*8) == 0) { // 128바이트마다 TAG 삽입
+				Steganobytes.add((byte) 'T');
+				Steganobytes.add((byte) 'A');
+				Steganobytes.add((byte) 'G');
+			}
+			if (Recordbits.get(pointer++) == 1) // 녹음 데이터의 비트 확인하고 버퍼에 값 삽입
+				inputByte += Math.pow(2, 7-bitCount%8);
+			bitCount++; // 현재 버퍼에 삽입된 비트 수
+			
+			if (bitCount % 8 == 0 && bitCount != 0) { // 8개 읽으면 바이트 삽입, 버퍼초기화
+				Steganobytes.add(inputByte);
+				inputByte = 0; // 버퍼 초기화
+				inputNumber += 8;
+			}
+		}
+		if ((inputByte != 0) && (bitCount % (125*8) == 0)) { // 데이터가 남아있는데, 128바이트 모두 채웠을 시 TAG 추가
+			Steganobytes.add((byte) 'T');
+			Steganobytes.add((byte) 'A');
+			Steganobytes.add((byte) 'G');
+		}
+		char[] endPoint = (Integer.toBinaryString(AAUs.get(AAUs.size()-1).sp)).toCharArray();
+		Steganobytes.addElement((byte) 'E'); // 뒤에서부터 수정된 마지막 AAU 시작 위치 반환
+		for (int i=endPoint.length-1; i>-1; i--) {
+			if (endPoint[i] == '1')
+				Steganobytes.addElement((byte) 1);
+			else
+				Steganobytes.addElement((byte) 0);
+		}
+		
+		char[] tagPoint = (Integer.toBinaryString(MP3bytes.length+128)).toCharArray();
+		Steganobytes.addElement((byte) 'E'); // 뒤에서부터 위조 TAG시작 위치 반환
+		for (int i=tagPoint.length-1; i>-1; i--) {
+			if (tagPoint[i] == '1')
+				Steganobytes.addElement((byte) 1);
+			else
+				Steganobytes.addElement((byte) 0);
+		}
+		
+		/*
+		int zeroCount=0;
+		boolean remain = false;
+		while (!(bitCount % 8 == 0)) { // 남은 데이터 처리
+			remain = true;
+			if (zeroCount > 2) { // 마지막에 0 세개 넣고 나머지는 1로 다 채움
+				inputByte += Math.pow(2, 7-bitCount%8);
+			}
+			zeroCount++;
+			bitCount++;
+		}
+		int endByte = 125;
+		if (remain) {
+			Steganobytes.add(inputByte); // 남은 데이터 넣기
+			endByte--;
+		}
+		inputByte=0;
+		for (;zeroCount < 3; zeroCount++) { // 0 세개 못넣었다면 마저 넣어주기
+			if (bitCount % 8 == 0) {
+				Steganobytes.addElement((byte) inputByte);
+				inputByte=0;
+			}
+			bitCount++;
+		}
+		if (bitCount % 8 == 0) {
+			Steganobytes.addElement((byte) inputByte);
+			inputByte=0;
+		}*//*
+		while (!(bitCount % (125*8) == 0)) { // TAG 나머지 모두 채우기
+			inputByte += Math.pow(2, 7-bitCount%8);
+			bitCount++;
+			if (bitCount % 8 == 0) {
+				Steganobytes.addElement((byte) inputByte);
+				inputByte=0;
+			}
+		}*/
 		//newByte[newByte.length-1] = (byte) 0xFF;
+		/*
+		if (bitCount % (125*8) == 0) {
+			Steganobytes.add((byte) 'T');
+			Steganobytes.add((byte) 'A');
+			Steganobytes.add((byte) 'G');
+		}
+		
+		for (int i=0;i < 3; i++) { // 0 세개 넣기
+			bitCount++;
+		}
+		while (bitCount % (125*8) != 0) { // TAG 나머지 모두 채우기
+			inputByte += Math.pow(2, 7-bitCount%8);
+			bitCount++;
+			if (bitCount % 8 == 0) {
+				Steganobytes.addElement((byte) inputByte);
+				inputByte=0;
+			}
+		}
+		*/
 		
 		System.out.println("처리 수 : " + (double) inputNumber / 8 / 1024 + " kb");
 		System.out.println("처리 완료");
@@ -259,7 +364,6 @@ public class Stegano {
 		return true;
 	}
 
-	
 	/** ID3 v2 Tag를 분석하여 첫 AAU 시작점을 찾음 */
 	private int findStartPoint() {
 		int ID3_lengh = 0;
