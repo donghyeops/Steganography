@@ -257,7 +257,6 @@ public class Stegano {
 			Steganobytes.add((byte)0);
 		}
 		
-		
 		// 여분 데이터 삽입
 		int end = Recordbits.size()-pointer;
 		byte inputByte = 0; // 입력 버퍼

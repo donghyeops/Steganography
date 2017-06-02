@@ -206,10 +206,13 @@ public class BackStegano {
 		int tagPoint = Integer.parseInt(tagPointString, 2);
 		
 		byte temp;
-		for (int i=tagPoint; i<MP3bytes.length; i++) {
+		for (int i=tagPoint-1; i<MP3bytes.length; i++) {
 			temp = MP3bytes[i];
-			if (temp == 'T' || temp == 'A' || temp == 'G')
+
+			if (i+2<MP3bytes.length && temp == 'T' && MP3bytes[i+1] == 'A' && MP3bytes[i+2] == 'G') {
+				i+=2;
 				continue;
+			}
 			for (int j = 128; j > 0; j /= 2) {
 				if ((temp & j) > 0)
 					Recordbits.add(1);
