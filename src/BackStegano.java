@@ -66,13 +66,13 @@ public class BackStegano {
 		byte inputByte = 0;
 		int bitCount = 0;
 		System.out.println("레코드 비트 사이즈 : " + Recordbits.size());
-		int endCount = 0; // 1이 연속으로 80개면 끝난거임 
+		int endCount = 0; // 1이 연속으로 80개면 끝난거임
 		for (int i = 48; i < Recordbits.size(); i++) { // 변환
 			if (Recordbits.get(i) == 1) { // 비트 확인하고 버퍼에 값 삽입
 				inputByte += Math.pow(2, 7 - bitCount % 8);
 				endCount++;
 			} else
-				endCount=0;
+				endCount = 0;
 			if (endCount == 75)
 				break;
 			bitCount++; // 현재 버퍼에 삽입된 비트 수
@@ -84,7 +84,7 @@ public class BackStegano {
 		}
 
 		byte[] Recordbytes = new byte[vecRecordbytes.size()];
-		for (int i = 0; i < Recordbytes.length - endCount/8; i++)
+		for (int i = 0; i < Recordbytes.length - endCount / 8; i++)
 			Recordbytes[i] = vecRecordbytes.get(i);
 
 		File RecordFile = new File(RecordFilePath);
@@ -103,132 +103,136 @@ public class BackStegano {
 
 	/** 2. 녹음 파일 추출 */
 	public boolean getRecord() {
-		if (MP3bytes == null) {
-			System.out.println("선택된 MP3 파일 없음");
-			return false;
-		}
-		int startPoint = findStartPoint();
-
-		Vector<AAU> AAUs = new Vector<AAU>();
-
-		initAAUs(AAUs, startPoint);
-
-		int count = 0; // 프레임 카운트
-		System.out.println("AAU 수 : " + AAUs.size());
-
-		for (AAU aau : AAUs) {
-			count++;
-			if (count < 5) // 초기 블록은 제외
-				continue;
-			/** 헤더 수정 */
-			{
-				{ /** Priv bit 수정 [1 bit] */
-					if ((MP3bytes[aau.sp + 2] & 1) > 0)
-						Recordbits.add(1);
-					else
-						Recordbits.add(0);
-				}
-				{ /** Copyright 수정 [1 bit] */
-					if ((MP3bytes[aau.sp + 3] & 8) > 0)
-						Recordbits.add(1);
-					else
-						Recordbits.add(0);
-				}
-				{ /** Original 수정 [1 bit] */
-					if ((MP3bytes[aau.sp + 3] & 4) > 0)
-						Recordbits.add(1);
-					else
-						Recordbits.add(0);
-				}
-				{ /** Emphasis 수정 [2 bits] */
-					if ((MP3bytes[aau.sp + 3] & 2) > 0)
-						Recordbits.add(1);
-					else
-						Recordbits.add(0);
-					if ((MP3bytes[aau.sp + 3] & 1) > 0)
-						Recordbits.add(1);
-					else
-						Recordbits.add(0);
-				}
+		try {
+			if (MP3bytes == null) {
+				System.out.println("선택된 MP3 파일 없음");
+				return false;
 			}
-			/** 사이드 인포 수정 */
-			{
-				{ /** private_bits, scfsi 수정 */
-					if (aau.singleMode == false) { // 듀얼 채널
-						for (int j = 64; j > 2; j /= 2) {
-							// 원래 j>8이 정성임. 근데 실험 결과 2번(scfsi) 더 수정해도 이상이 없음
-							if ((MP3bytes[aau.sidePoint + 1] & j) > 0)
-								Recordbits.add(1);
-							else
-								Recordbits.add(0);
-						}
-						for (int j = 128; j > 32; j /= 2) {
-							// 두번 째 scfsi 수정
-							if ((MP3bytes[aau.sidePoint + 2] & j) > 0)
-								Recordbits.add(1);
-							else
-								Recordbits.add(0);
-						}
-					} else { // 싱글 채널
-						for (int j = 64; j > 2; j /= 2) {
-							if ((MP3bytes[aau.sidePoint + 1] & j) > 0)
-								Recordbits.add(1);
-							else
-								Recordbits.add(0);
+			int startPoint = findStartPoint();
+
+			Vector<AAU> AAUs = new Vector<AAU>();
+
+			initAAUs(AAUs, startPoint);
+
+			int count = 0; // 프레임 카운트
+			System.out.println("AAU 수 : " + AAUs.size());
+
+			for (AAU aau : AAUs) {
+				count++;
+				if (count < 5) // 초기 블록은 제외
+					continue;
+				/** 헤더 수정 */
+				{
+					{ /** Priv bit 수정 [1 bit] */
+						if ((MP3bytes[aau.sp + 2] & 1) > 0)
+							Recordbits.add(1);
+						else
+							Recordbits.add(0);
+					}
+					{ /** Copyright 수정 [1 bit] */
+						if ((MP3bytes[aau.sp + 3] & 8) > 0)
+							Recordbits.add(1);
+						else
+							Recordbits.add(0);
+					}
+					{ /** Original 수정 [1 bit] */
+						if ((MP3bytes[aau.sp + 3] & 4) > 0)
+							Recordbits.add(1);
+						else
+							Recordbits.add(0);
+					}
+					{ /** Emphasis 수정 [2 bits] */
+						if ((MP3bytes[aau.sp + 3] & 2) > 0)
+							Recordbits.add(1);
+						else
+							Recordbits.add(0);
+						if ((MP3bytes[aau.sp + 3] & 1) > 0)
+							Recordbits.add(1);
+						else
+							Recordbits.add(0);
+					}
+				}
+				/** 사이드 인포 수정 */
+				{
+					{ /** private_bits, scfsi 수정 */
+						if (aau.singleMode == false) { // 듀얼 채널
+							for (int j = 64; j > 2; j /= 2) {
+								// 원래 j>8이 정성임. 근데 실험 결과 2번(scfsi) 더 수정해도 이상이 없음
+								if ((MP3bytes[aau.sidePoint + 1] & j) > 0)
+									Recordbits.add(1);
+								else
+									Recordbits.add(0);
+							}
+							for (int j = 128; j > 32; j /= 2) {
+								// 두번 째 scfsi 수정
+								if ((MP3bytes[aau.sidePoint + 2] & j) > 0)
+									Recordbits.add(1);
+								else
+									Recordbits.add(0);
+							}
+						} else { // 싱글 채널
+							for (int j = 64; j > 2; j /= 2) {
+								if ((MP3bytes[aau.sidePoint + 1] & j) > 0)
+									Recordbits.add(1);
+								else
+									Recordbits.add(0);
+							}
 						}
 					}
 				}
-			}
-			{ /** 마지막 비트 수정 (2 bits) */
-				for (int j = 2; j > 0; j /= 2) {
-					if ((MP3bytes[aau.sdp - 1] & j) > 0)
-						Recordbits.add(1);
-					else
-						Recordbits.add(0);
+				{ /** 마지막 비트 수정 (2 bits) */
+					for (int j = 2; j > 0; j /= 2) {
+						if ((MP3bytes[aau.sdp - 1] & j) > 0)
+							Recordbits.add(1);
+						else
+							Recordbits.add(0);
+					}
 				}
 			}
-		}
 
-		// 위조 TAG 시작 위치 찾기
-		String tagPointString = "";
-		for (int p2 = MP3bytes.length - 1;; p2--) {
-			if (MP3bytes[p2] == 'E')
-				break;
-			tagPointString += String.valueOf(MP3bytes[p2]);
-		}
-		int tagPoint = Integer.parseInt(tagPointString, 2);
-
-		try {
-			byte temp;
-			for (int i = tagPoint - 1; i < MP3bytes.length; i++) {
-				temp = MP3bytes[i];
-
-				if (i + 2 < MP3bytes.length && temp == 'T' && MP3bytes[i + 1] == 'A' && MP3bytes[i + 2] == 'G') {
-					i += 2;
-					continue;
-				}
-				for (int j = 128; j > 0; j /= 2) {
-					if ((temp & j) > 0)
-						Recordbits.add(1);
-					else
-						Recordbits.add(0);
-				}
+			// 위조 TAG 시작 위치 찾기
+			String tagPointString = "";
+			for (int p2 = MP3bytes.length - 1;; p2--) {
+				if (MP3bytes[p2] == 'E')
+					break;
+				tagPointString += String.valueOf(MP3bytes[p2]);
 			}
-		} catch (ArrayIndexOutOfBoundsException e) {
-			System.out.println("추출 끝");
-		}
+			int tagPoint = Integer.parseInt(tagPointString, 2);
 
-		for (int i = 0; i < 24; i++) {
-			if (Recordbits.get(i) == 0)
-				return false;
-		}
-		for (int i = 24; i < 48; i++) {
-			if (Recordbits.get(i) == 1)
-				return false;
-		}
-		System.out.println("처리 완료");
+			try {
+				byte temp;
+				for (int i = tagPoint - 1; i < MP3bytes.length; i++) {
+					temp = MP3bytes[i];
 
-		return true;
+					if (i + 2 < MP3bytes.length && temp == 'T' && MP3bytes[i + 1] == 'A' && MP3bytes[i + 2] == 'G') {
+						i += 2;
+						continue;
+					}
+					for (int j = 128; j > 0; j /= 2) {
+						if ((temp & j) > 0)
+							Recordbits.add(1);
+						else
+							Recordbits.add(0);
+					}
+				}
+			} catch (ArrayIndexOutOfBoundsException e) {
+				System.out.println("추출 끝");
+			}
+
+			for (int i = 0; i < 24; i++) {
+				if (Recordbits.get(i) == 0)
+					return false;
+			}
+			for (int i = 24; i < 48; i++) {
+				if (Recordbits.get(i) == 1)
+					return false;
+			}
+			System.out.println("처리 완료");
+
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
 	}
 
 	/** ID3 v2 Tag를 분석하여 첫 AAU 시작점을 찾음 */
@@ -255,122 +259,119 @@ public class BackStegano {
 	}
 
 	/** AAU들의 각 길이를 알아냄 */
-	private void initAAUs(Vector<AAU> AAUs, int startPoint) {
-		int p = startPoint;
-		int[] bpsTable = { 0, 32, 40, 45, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0 };
+	private boolean initAAUs(Vector<AAU> AAUs, int startPoint) {
+		try {
+			int p = startPoint;
+			int[] bpsTable = { 0, 32, 40, 45, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0 };
 
-		// 위조 TAG 시작 위치 찾기
-		int p2;
-		for (p2 = MP3bytes.length - 1;; p2--) {
-			if (MP3bytes[p2] == 'E')
-				break;
-		}
-
-		// 마지막 수정 AAU 시작 위치 찾기
-		String endPointString = "";
-		for (int p3 = p2 - 1;; p3--) {
-			if (MP3bytes[p3] == 'E')
-				break;
-			endPointString += String.valueOf(MP3bytes[p3]);
-		}
-		int endPoint = Integer.parseInt(endPointString, 2);
-
-		while (p < endPoint + 1) {
-			AAU aau = new AAU();
-			aau.sp = p;
-
-			boolean padding = false;
-			int AAUSize = 0;
-			int frequency = 0;
-			int bps = 0;
-			int channelMode = 0; // 채널 모드
-			int sideSize = 0; // sideInfo 사이즈
-			// == Header ==
-			// CRC 체크
-			if ((MP3bytes[p + 1] & 1) == 0)
-				aau.CRC = true;
-			else
-				aau.CRC = false;
-
-			// 3번째 바이트
-			// 패딩 체크
-			if ((MP3bytes[p + 2] & 2) > 0)
-				padding = true;
-
-			// 주파수 계산
-			frequency = (MP3bytes[p + 2] & 4) + (MP3bytes[p + 2] & 8);
-			// System.out.println("주파수 : " + frequency);
-			switch (frequency) {
-			case 0:
-				frequency = 44100;
-				break;
-			case 4:
-				frequency = 48000;
-				break;
-			case 8:
-				frequency = 32000;
-				break;
-			default:
-				System.out.println("주파수 에러 : " + frequency);
-				continue;
+			// 위조 TAG 시작 위치 찾기
+			int p2;
+			for (p2 = MP3bytes.length - 1;; p2--) {
+				if (MP3bytes[p2] == 'E')
+					break;
 			}
 
-			// 비트율 계산
-			for (int i = 4; i < 8; i++) {
-				if ((MP3bytes[p + 2] & (int) Math.pow(2, i)) > 0)
-					bps += (int) Math.pow(2, i - 4);
+			// 마지막 수정 AAU 시작 위치 찾기
+			String endPointString = "";
+			for (int p3 = p2 - 1;; p3--) {
+				if (MP3bytes[p3] == 'E')
+					break;
+				endPointString += String.valueOf(MP3bytes[p3]);
 			}
-			// bps = (MP3bytes[p+2] & 16) + (MP3bytes[p+2] & 32) +
-			// (MP3bytes[p+2] & 64) +
-			// (MP3bytes[p+2] & 128);
-			bps = bpsTable[bps] * 1000;
-			if (bps == 0) {
-				System.out.println("비트율 에러 : " + bps);
-				System.out.println("에러 위치 : " + (p + 2));
-				return;
+			int endPoint;
+			try {
+				endPoint = Integer.parseInt(endPointString, 2);
+			} catch (NumberFormatException e) {
+				return false;
 			}
+			while (p < endPoint + 1) {
+				AAU aau = new AAU();
+				aau.sp = p;
 
-			AAUSize = (int) (144 * bps / frequency); // AAU 길이 계산
-			if (padding == true)
-				AAUSize++;
+				boolean padding = false;
+				int AAUSize = 0;
+				int frequency = 0;
+				int bps = 0;
+				int channelMode = 0; // 채널 모드
+				int sideSize = 0; // sideInfo 사이즈
+				// == Header ==
+				// CRC 체크
+				if ((MP3bytes[p + 1] & 1) == 0)
+					aau.CRC = true;
+				else
+					aau.CRC = false;
 
-			// 4번째 바이트 (마지막)
-			// 채널 모드 계산
-			for (int i = 6; i < 8; i++) {
-				if ((MP3bytes[p + 3] & (int) Math.pow(2, i)) > 0)
-					channelMode += (int) Math.pow(2, i - 6);
+				// 3번째 바이트
+				// 패딩 체크
+				if ((MP3bytes[p + 2] & 2) > 0)
+					padding = true;
+
+				// 주파수 계산
+				frequency = (MP3bytes[p + 2] & 4) + (MP3bytes[p + 2] & 8);
+				// System.out.println("주파수 : " + frequency);
+				switch (frequency) {
+				case 0:
+					frequency = 44100;
+					break;
+				case 4:
+					frequency = 48000;
+					break;
+				case 8:
+					frequency = 32000;
+					break;
+				default:
+					System.out.println("주파수 에러 : " + frequency);
+					continue;
+				}
+
+				// 비트율 계산
+				for (int i = 4; i < 8; i++) {
+					if ((MP3bytes[p + 2] & (int) Math.pow(2, i)) > 0)
+						bps += (int) Math.pow(2, i - 4);
+				}
+				// bps = (MP3bytes[p+2] & 16) + (MP3bytes[p+2] & 32) +
+				// (MP3bytes[p+2] & 64) +
+				// (MP3bytes[p+2] & 128);
+				bps = bpsTable[bps] * 1000;
+				if (bps == 0) {
+					System.out.println("비트율 에러 : " + bps);
+					System.out.println("에러 위치 : " + (p + 2));
+					return false;
+				}
+
+				AAUSize = (int) (144 * bps / frequency); // AAU 길이 계산
+				if (padding == true)
+					AAUSize++;
+
+				// 4번째 바이트 (마지막)
+				// 채널 모드 계산
+				for (int i = 6; i < 8; i++) {
+					if ((MP3bytes[p + 3] & (int) Math.pow(2, i)) > 0)
+						channelMode += (int) Math.pow(2, i - 6);
+				}
+				// 사이드 인포 길이 계산
+				if (channelMode == 3) {
+					sideSize = 17;
+					aau.singleMode = true;
+				} else {
+					sideSize = 32;
+					aau.singleMode = false;
+				}
+
+				aau.ep = aau.sp + AAUSize - 1;
+				p = aau.ep + 1;
+				aau.sdp = aau.sp + sideSize + 4;
+				aau.sidePoint = aau.sp + 4; // 사이드인포 시작점 계산
+				if (aau.CRC == true) {
+					aau.sidePoint += 2;
+					aau.sdp += 2;
+				}
+
+				AAUs.addElement(aau);
 			}
-			// 사이드 인포 길이 계산
-			if (channelMode == 3) {
-				sideSize = 17;
-				aau.singleMode = true;
-			} else {
-				sideSize = 32;
-				aau.singleMode = false;
-			}
-
-			// 사이드인포 길이까지 구해둠
-			// 계속이어서 하믄됨
-			// ===========
-			// System.out.println("frequency : " + frequency);
-			// System.out.println("bps : " + bps);
-			// System.out.println("AAUSize : " + AAUSize);
-			// System.out.println("sideSize : " + sideSize);
-
-			aau.ep = aau.sp + AAUSize - 1;
-			p = aau.ep + 1;
-			aau.sdp = aau.sp + sideSize + 4;
-			aau.sidePoint = aau.sp + 4; // 사이드인포 시작점 계산
-			if (aau.CRC == true) {
-				aau.sidePoint += 2;
-				aau.sdp += 2;
-			}
-
-			AAUs.addElement(aau);
-			// System.out.println("(Hex) sp : " + Integer.toHexString(aau.sp));
-			// System.out.println("(Hex) sdp : " +
-			// Integer.toHexString(aau.sdp));
-			// System.out.println("(Hex) ep : " + Integer.toHexString(aau.ep));
+			return true;
+		} catch (Exception e) {
+			return false;
 		}
 	}
 }
