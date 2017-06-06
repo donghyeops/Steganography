@@ -179,15 +179,15 @@ public class BackStegano {
 							}
 						}
 					}
-				}
-				{ /** 마지막 비트 수정 (2 bits) */
+				}/*
+				{ /** 마지막 비트 수정 (2 bits) *//*
 					for (int j = 2; j > 0; j /= 2) {
 						if ((MP3bytes[aau.sdp - 1] & j) > 0)
 							Recordbits.add(1);
 						else
 							Recordbits.add(0);
 					}
-				}
+				}*/
 			}
 
 			// 위조 TAG 시작 위치 찾기

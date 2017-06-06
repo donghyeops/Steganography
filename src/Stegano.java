@@ -217,7 +217,8 @@ public class Stegano {
 						}
 					}
 				}
-				{ /** 마지막 비트 수정 (2 bits) */
+				/*
+				{ /** 마지막 비트 수정 (2 bits) *//*
 					for (int j = 2; j > 0; j /= 2) {
 						if (Recordbits.get(pointer++) == 1)
 							MP3bytes[aau.sdp - 1] |= j;
@@ -225,7 +226,7 @@ public class Stegano {
 							MP3bytes[aau.sdp - 1] &= 255 - j;
 						inputNumber++;
 					}
-				}
+				}*/
 			}
 
 		} catch (ArrayIndexOutOfBoundsException e) {
