@@ -156,20 +156,20 @@ public class BackStegano {
 				{
 					{ /** private_bits, scfsi 수정 */
 						if (aau.singleMode == false) { // 듀얼 채널
-							for (int j = 64; j > 2; j /= 2) {
+							for (int j = 64; j > 8; j /= 2) {
 								// 원래 j>8이 정성임. 근데 실험 결과 2번(scfsi) 더 수정해도 이상이 없음
 								if ((MP3bytes[aau.sidePoint + 1] & j) > 0)
 									Recordbits.add(1);
 								else
 									Recordbits.add(0);
-							}
+							}/*
 							for (int j = 128; j > 32; j /= 2) {
 								// 두번 째 scfsi 수정
 								if ((MP3bytes[aau.sidePoint + 2] & j) > 0)
 									Recordbits.add(1);
 								else
 									Recordbits.add(0);
-							}
+							}*/
 						} else { // 싱글 채널
 							for (int j = 64; j > 2; j /= 2) {
 								if ((MP3bytes[aau.sidePoint + 1] & j) > 0)

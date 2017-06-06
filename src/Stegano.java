@@ -190,14 +190,14 @@ public class Stegano {
 				{
 					{ /** private_bits, scfsi 수정 */
 						if (aau.singleMode == false) { // 듀얼 채널
-							for (int j = 64; j > 2; j /= 2) {
+							for (int j = 64; j > 8; j /= 2) {
 								// 원래 j>8이 정성임. 근데 실험 결과 2번(scfsi) 더 수정해도 이상이 없음
 								if (Recordbits.get(pointer++) == 1)
 									MP3bytes[aau.sidePoint + 1] |= j;
 								else
 									MP3bytes[aau.sidePoint + 1] &= 255 - j;
 								inputNumber++;
-							}
+							}/*
 							for (int j = 128; j > 32; j /= 2) {
 								// 두번 째 scfsi 수정
 								if (Recordbits.get(pointer++) == 1)
@@ -205,7 +205,7 @@ public class Stegano {
 								else
 									MP3bytes[aau.sidePoint + 2] &= 255 - j;
 								inputNumber++;
-							}
+							}*/
 						} else { // 싱글 채널
 							for (int j = 64; j > 2; j /= 2) {
 								if (Recordbits.get(pointer++) == 1)

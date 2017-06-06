@@ -6,9 +6,9 @@ import java.io.IOException;
 
 public class Main {
 	public static void main(String[] args) {
-		String MP3FilePath = "sample2.mp3";
-		String recordFilePath = "record2.mp3";
-		String SteganoFilePath = "output.mp3";
+		String MP3FilePath = "problem.mp3";
+		String recordFilePath = "recordSample.mp3";
+		String SteganoFilePath = "추출 problem.mp3";
 		
 		Stegano stegano = new Stegano();
 		
